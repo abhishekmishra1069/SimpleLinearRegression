@@ -1,0 +1,33 @@
+# Use the Python 3.13 slim image as requested
+FROM python:3.13-slim
+
+# Install system dependencies needed for compiling NumPy, Pandas, and Scikit-learn
+# Replaced 'libatlas-base-dev' with 'libopenblas-dev' to ensure necessary BLAS/LAPACK 
+# libraries are available for Pandas and NumPy compilation on this specific Debian distribution.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gfortran \
+        python3-dev \
+        libopenblas-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /usr/src/app
+# STEP 4.5/10 (New Step): Install build dependencies (setuptools and wheel)
+RUN pip install setuptools wheel
+# Copy the requirements file and install dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the trained model and application files
+COPY app.py .
+COPY poly_reg_model.pkl .
+COPY poly_features.pkl .
+
+# Expose the port the app runs on
+EXPOSE 5000
+
+# Command to run the application using Gunicorn (production server)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
